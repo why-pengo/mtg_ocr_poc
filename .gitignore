@@ -1,0 +1,24 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# All images in the images/ directory
+images/
+
+# Model caches (can be several GB)
+.EasyOCR/
+~/.paddleocr/
+
+# Test images (provide your own; only the manifest is tracked)
+tests/fixtures/*.jpg
+tests/fixtures/*.jpeg
+tests/fixtures/*.png
+tests/fixtures/*.webp

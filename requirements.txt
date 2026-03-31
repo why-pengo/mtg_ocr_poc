@@ -1,0 +1,19 @@
+# Core — native engines (no system packages required)
+easyocr
+opencv-python
+Pillow
+scrython
+rapidfuzz
+tabulate
+
+# Dev
+pytest
+pytest-cov
+black
+isort
+flake8
+
+# Optional engines — install separately as needed:
+#   PaddleOCR:  pip install paddlepaddle paddleocr
+#   TrOCR:      pip install transformers torch torchvision
+#   Tesseract:  docker build -t mtg-ocr-tesseract -f docker/tesseract/Dockerfile .
