@@ -151,6 +151,62 @@ tests/
   support it (iTerm2, Kitty, recent GNOME Terminal). Gracefully degrade to plain URLs otherwise.
 - **Docker engine wrapper**: `tesseract_engine.py` should run the Docker container as a subprocess,
   pass the image via a volume mount, and parse JSON output from stdout.
+- **scrython Search API**: `scrython.cards.Named(fuzzy=name)` returns a card object with method-call
+  accessors (`card.name()`, `card.scryfall_uri()`). `scrython.cards.Search(q=...)` returns a search
+  object — call `.data()` on it to get a **list of plain dicts** (use `card["name"]`, not `card.name()`).
+
+## Card Detection: Known Challenges & Strategies
+
+Findings from testing against real-world photos (see `images/` directory, gitignored).
+
+### Difficulty tiers
+
+| Image type | Example | Outcome | Root cause |
+|---|---|---|---|
+| Standard bordered card, light/contrasting background | IMG_1259 | ✅ Works | Clear quad contour at card edges |
+| Standard bordered card, colourful but distinct background | IMG_1260 | ✅ Works | Coloured border contrasts enough |
+| Standard bordered card, **dark background** | IMG_1282 | ⚠️ Fails | Card edges blend into dark surface |
+| **Borderless/extended-art** card, dark background | IMG_1281 | ❌ Fails | No rectangular border exists; foil adds noise |
+
+### Strategy A — Robust outer-edge detection (for bordered cards on dark backgrounds)
+
+When the initial Canny pass fails, retry with progressively lower thresholds before giving up:
+```
+Attempt 1: Canny(50, 150)  — current default
+Attempt 2: Canny(30, 100)
+Attempt 3: Canny(15, 60)   — last resort
+```
+Also try bilateral filter instead of Gaussian blur — it preserves edges better on noisy/dark surfaces.
+
+### Strategy B — Inner structural element detection (for borderless/extended-art cards)
+
+MTG cards have predictable internal horizontal structure regardless of border style.
+Use Hough line detection to find the strong horizontal dividers:
+
+```
+Card top
+  ~3.5%  ┌─────────────────────┐  ← top of name bar
+ ~11.5%  └─────────────────────┘  ← bottom of name bar / top of art
+  ~57%   ┌─────────────────────┐  ← type line (STRONGEST horizontal line — always present)
+  ~60%   └─────────────────────┘  ← bottom of type line / top of text box
+  ~88%   └─────────────────────┘  ← bottom of text box
+Card bottom
+```
+
+The **type line** is the most reliable anchor — it is a solid horizontal bar present on every
+MTG card regardless of frame style (standard, borderless, showcase, retro). Detect it with:
+1. Horizontal Sobel gradient → threshold → `cv2.HoughLinesP`
+2. Cluster horizontal lines by y-position; the type line cluster will be near y ≈ 58% of card height
+3. Use the detected type line y-position to back-calculate the full card bounding box,
+   then crop the name bar region as an absolute pixel offset above it.
+
+The inner structure detection lives in `preprocessing/card_detect.py` as a fallback that is
+called when outer-edge detection fails.
+
+### Implementation order
+1. Make outer detection retry with multiple Canny thresholds (quick win for IMG_1282-style)
+2. Add inner structure (Hough type-line) fallback for borderless cards (IMG_1281-style)
+3. Both strategies produce the same output: a rectified, axis-aligned card image
 
 ## GitHub Issue Writing Guidelines
 

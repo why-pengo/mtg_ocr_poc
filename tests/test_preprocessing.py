@@ -1,10 +1,16 @@
 """Tests for the image preprocessing pipeline."""
 from __future__ import annotations
 
+import cv2
 import numpy as np
 import pytest
 
-from preprocessing.card_detect import detect_and_rectify
+from preprocessing.card_detect import (
+    _plausible_card_quad,
+    _try_inner_detection,
+    _try_outer_detection,
+    detect_and_rectify,
+)
 from preprocessing.image_utils import crop_name_region, enhance_for_ocr
 
 
@@ -18,9 +24,56 @@ class TestDetectAndRectify:
         assert result.shape[0] > 0 and result.shape[1] > 0
 
     def test_falls_back_gracefully_when_no_contour(self, sample_card_image: np.ndarray) -> None:
-        # A plain noise image has no clear card contour; should still return something usable
         result = detect_and_rectify(sample_card_image)
         assert result.size > 0
+
+
+class TestPlausibleCardQuad:
+    def test_accepts_portrait_card_shape(self) -> None:
+        pts = np.array([[0, 0], [630, 0], [630, 880], [0, 880]], dtype="float32")
+        assert _plausible_card_quad(pts) is True
+
+    def test_accepts_landscape_card_shape(self) -> None:
+        pts = np.array([[0, 0], [880, 0], [880, 630], [0, 630]], dtype="float32")
+        assert _plausible_card_quad(pts) is True
+
+    def test_rejects_square(self) -> None:
+        pts = np.array([[0, 0], [500, 0], [500, 500], [0, 500]], dtype="float32")
+        assert _plausible_card_quad(pts) is False
+
+    def test_rejects_tiny_quad(self) -> None:
+        pts = np.array([[0, 0], [5, 0], [5, 7], [0, 7]], dtype="float32")
+        assert _plausible_card_quad(pts) is False
+
+
+class TestTryOuterDetection:
+    def test_returns_none_or_ndarray_on_noise(self, sample_card_image: np.ndarray) -> None:
+        result = _try_outer_detection(sample_card_image)
+        assert result is None or isinstance(result, np.ndarray)
+
+    def test_detects_card_shaped_rectangle(self) -> None:
+        # White portrait card-shaped rect on a black background — should be detected.
+        img = np.zeros((1200, 900, 3), dtype=np.uint8)
+        cv2.rectangle(img, (100, 100), (730, 980), (255, 255, 255), thickness=-1)
+        result = _try_outer_detection(img)
+        assert result is not None
+        assert result.shape[0] > 0
+
+
+class TestTryInnerDetection:
+    def test_returns_none_or_ndarray_on_noise(self, sample_card_image: np.ndarray) -> None:
+        result = _try_inner_detection(sample_card_image)
+        assert result is None or isinstance(result, np.ndarray)
+
+    def test_detects_type_line_in_synthetic_card(self) -> None:
+        # Build a synthetic card with a clear horizontal type-line bar at the expected position.
+        h, w = 880, 630
+        img = np.full((h, w, 3), 200, dtype=np.uint8)
+        type_line_y = int(h * 0.575)
+        cv2.rectangle(img, (0, type_line_y - 5), (w, type_line_y + 18), (80, 70, 60), -1)
+        result = _try_inner_detection(img)
+        assert result is not None
+        assert result.shape[0] > 0
 
 
 class TestCropNameRegion:
