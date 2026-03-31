@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 
 from engines.base import OCREngine, OCRResult
+from preprocessing.image_utils import normalize_ocr_text
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class EasyOCREngine(OCREngine):
                 )
 
             # results: list of (bbox, text, confidence) — join all fragments
-            text = " ".join(r[1] for r in results).strip()
+            text = normalize_ocr_text(" ".join(r[1] for r in results))
             confidence = sum(r[2] for r in results) / len(results)
 
             return OCRResult(
