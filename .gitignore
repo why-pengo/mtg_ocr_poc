@@ -22,3 +22,5 @@ tests/fixtures/*.jpg
 tests/fixtures/*.jpeg
 tests/fixtures/*.png
 tests/fixtures/*.webp
+
+.idea/
