@@ -12,9 +12,13 @@ _SCRYFALL_NAMED_URL = "https://api.scryfall.com/cards/named"
 _SCRYFALL_SEARCH_URL = "https://api.scryfall.com/cards/search"
 
 _RATE_LIMIT_S = 0.1  # 100 ms between calls per Scryfall policy
+_HEADERS = {
+    "User-Agent": "mtg-ocr-poc/1.0 (github.com/why-pengo/mtg_ocr_poc)",
+    "Accept": "application/json;q=0.9,*/*;q=0.8",
+}
 
 
-def _hyperlink(url: str, text: str) -> str:
+def hyperlink(url: str, text: str) -> str:
     """Wrap *text* in an OSC 8 terminal hyperlink pointing to *url*.
 
     Renders as a clickable link in iTerm2, Kitty, GNOME Terminal 3.26+, etc.
@@ -23,8 +27,42 @@ def _hyperlink(url: str, text: str) -> str:
     return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
 
 
+# Backward-compatible alias used by the stdout CLI helpers below.
+_hyperlink = hyperlink
+
+
 def _rate_limit() -> None:
     time.sleep(_RATE_LIMIT_S)
+
+
+def _scryfall_get_json(
+    url: str, params: dict[str, str]
+) -> tuple[Optional[dict[str, Any]], Optional[str], Optional[int]]:
+    """GET *url* with *params* and return ``(payload, error_message, status_code)``.
+
+    Returns ``(None, error_message, status_code)`` on any failure so callers
+    can decide whether to surface the error or fall through to a search.
+    """
+    try:
+        resp = requests.get(url, params=params, headers=_HEADERS, timeout=10)
+    except requests.RequestException as exc:
+        return None, f"Scryfall request failed: {exc}", None
+
+    if resp.status_code == 429:
+        return None, "Scryfall rate limit exceeded — please wait and retry.", resp.status_code
+    if 500 <= resp.status_code < 600:
+        return (
+            None,
+            f"Scryfall server error ({resp.status_code}) — please retry later.",
+            resp.status_code,
+        )
+    if not resp.ok:
+        return None, f"Scryfall returned HTTP {resp.status_code}.", resp.status_code
+
+    try:
+        return resp.json(), None, resp.status_code
+    except ValueError:
+        return None, "Scryfall returned invalid JSON.", resp.status_code
 
 
 def prompt_and_lookup(detected_name: str) -> None:
@@ -69,53 +107,43 @@ def _lookup_and_display(name: str) -> None:
     for i, card in enumerate(cards, 1):
         url = card["scryfall_uri"]
         set_text = f"{card['set_name']} ({card['set'].upper()})"
-        link = _hyperlink(url, card["name"])
+        link = hyperlink(url, card["name"])
         print(f"  {i}. {link}  —  {set_text}")
 
 
 def _print_single_card(card: object) -> None:
     url = card.scryfall_uri()  # type: ignore[attr-defined]
-    link = _hyperlink(url, card.name())  # type: ignore[attr-defined]
+    link = hyperlink(url, card.name())  # type: ignore[attr-defined]
     print(f"\n  {link}")
     print(f"  {card.type_line()}")  # type: ignore[attr-defined]
     print(f"  {card.set_name()} ({card.set().upper()})")  # type: ignore[attr-defined]
 
 
-def scryfall_search(name: str) -> list[dict[str, Any]]:
-    """Search Scryfall for *name*; return a list of card dicts (empty on failure).
+def scryfall_search(name: str) -> tuple[list[dict[str, Any]], Optional[str]]:
+    """Search Scryfall for *name* and return ``(cards, error_message)``.
 
     Tries fuzzy named lookup first; falls back to broader search.
-    Never raises — returns [] on any error.
+    Returns ``([], None)`` when no cards match, and ``([], error_message)``
+    for network/HTTP/JSON failures.
+    Never raises.
     """
     _rate_limit()
 
-    try:
-        resp = requests.get(
-            _SCRYFALL_NAMED_URL,
-            params={"fuzzy": name},
-            timeout=10,
-        )
-        if resp.ok:
-            card = resp.json()
-            return [card]
-    except Exception:
-        pass
+    card, error, status = _scryfall_get_json(_SCRYFALL_NAMED_URL, {"fuzzy": name})
+    if card is not None:
+        return [card], None
+    # 404 means "no exact match" — fall through to search; other errors propagate
+    if error is not None and status != 404:
+        return [], error
 
     _rate_limit()
 
-    try:
-        resp = requests.get(
-            _SCRYFALL_SEARCH_URL,
-            params={"q": f'name:"{name}"'},
-            timeout=10,
-        )
-        if resp.ok:
-            data = resp.json()
-            return data.get("data", [])
-    except Exception:
-        pass
+    data, error, _ = _scryfall_get_json(_SCRYFALL_SEARCH_URL, {"q": f'name:"{name}"'})
+    if error is not None:
+        return [], error
 
-    return []
+    cards: list[dict[str, Any]] = data.get("data", []) if data is not None else []
+    return cards, None
 
 
 def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
@@ -133,7 +161,9 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
     _rate_limit()
 
     try:
-        resp = requests.get(_SCRYFALL_NAMED_URL, params={"fuzzy": name}, timeout=10)
+        resp = requests.get(
+            _SCRYFALL_NAMED_URL, params={"fuzzy": name}, headers=_HEADERS, timeout=10
+        )
     except requests.exceptions.RequestException as exc:
         print(f"  ✗  Network error contacting Scryfall: {exc}")
         return None
@@ -145,13 +175,15 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
             print("  ✗  Invalid response from Scryfall.")
             return None
         url = card.get("scryfall_uri", "")
-        link = _hyperlink(url, card["name"]) if url else card["name"]
+        link = hyperlink(url, card["name"]) if url else card["name"]
         print(f"  ✓  {link}  —  {card.get('set_name', '')} ({card.get('set', '').upper()})")
         return card
 
     _rate_limit()
     try:
-        search_resp = requests.get(_SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10)
+        search_resp = requests.get(
+            _SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, headers=_HEADERS, timeout=10
+        )
     except requests.exceptions.RequestException as exc:
         print(f"  ✗  Network error contacting Scryfall: {exc}")
         return None
@@ -179,7 +211,7 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
     for i, card in enumerate(cards, 1):
         url = card.get("scryfall_uri", "")
         set_text = f"{card.get('set_name', '')} ({card.get('set', '').upper()})"
-        link = _hyperlink(url, card["name"]) if url else card["name"]
+        link = hyperlink(url, card["name"]) if url else card["name"]
         print(f"    {i}. {link}  —  {set_text}")
 
     while True:

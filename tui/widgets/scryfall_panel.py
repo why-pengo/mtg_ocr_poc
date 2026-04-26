@@ -9,7 +9,7 @@ from textual.containers import Horizontal
 from textual.widget import Widget
 from textual.widgets import Button, Input, Label, RichLog
 
-from scryfall.lookup import _hyperlink
+from scryfall.lookup import hyperlink
 
 
 class ScryfallPanel(Widget):
@@ -48,7 +48,7 @@ class ScryfallPanel(Widget):
             type_line = card.get("type_line", "")
             set_name = card.get("set_name", "")
             set_code = card.get("set", "").upper()
-            link = _hyperlink(url, name)
+            link = hyperlink(url, name) if url else name
             log.write(f"  {i}. {link}  [dim]{set_name} ({set_code})[/dim]  {type_line}")
 
     def show_error(self, msg: str) -> None:

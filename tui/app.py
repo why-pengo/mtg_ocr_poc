@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from textual.app import App, ComposeResult  # noqa: F401
+from textual.app import App
 
 from tui.screens.main_screen import MainScreen
 

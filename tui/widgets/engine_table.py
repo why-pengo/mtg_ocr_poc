@@ -29,7 +29,7 @@ class EngineResultsTable(Widget):
     def add_pending_row(self, engine_name: str) -> None:
         """Add a placeholder row for *engine_name* while it is still running."""
         table = self.query_one(DataTable)
-        table.add_row("⏳ running…", "—", "—", key=engine_name, label=engine_name)
+        table.add_row(engine_name, "⏳ running…", "—", "—", key=engine_name, label=engine_name)
 
     def update_row(self, result: OCRResult) -> None:
         """Update the row for *result.engine_name* with the finished result."""

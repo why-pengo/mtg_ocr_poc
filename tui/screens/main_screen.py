@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -28,9 +29,10 @@ class EngineResultReady(Message):
 class ScryfallResultsReady(Message):
     """Posted by the Scryfall lookup worker when results are available."""
 
-    def __init__(self, cards: list[dict]) -> None:
+    def __init__(self, cards: list[dict[str, Any]], error: str | None = None) -> None:
         super().__init__()
         self.cards = cards
+        self.error = error
 
 
 class MainScreen(Screen):
@@ -68,6 +70,13 @@ class MainScreen(Screen):
         all_engines = [EasyOCREngine(), PaddleOCREngine(), TrOCREngine(), TesseractEngine()]
         available = [e for e in all_engines if e.is_available()]
 
+        if not available:
+            panel = self.query_one(ScryfallPanel)
+            self.app.call_from_thread(
+                panel.show_error, "No OCR engines are available. Check your installation."
+            )
+            return
+
         table = self.query_one(EngineResultsTable)
         for engine in available:
             self.app.call_from_thread(table.add_pending_row, engine.name)
@@ -91,8 +100,8 @@ class MainScreen(Screen):
         """Query Scryfall for *name* and post ScryfallResultsReady."""
         from scryfall.lookup import scryfall_search
 
-        cards = scryfall_search(name)
-        self.post_message(ScryfallResultsReady(cards))
+        cards, error = scryfall_search(name)
+        self.post_message(ScryfallResultsReady(cards, error))
 
     # ------------------------------------------------------------------
     # Message handlers
@@ -108,7 +117,9 @@ class MainScreen(Screen):
 
     def on_scryfall_results_ready(self, message: ScryfallResultsReady) -> None:
         panel = self.query_one(ScryfallPanel)
-        if message.cards:
+        if message.error:
+            panel.show_error(message.error)
+        elif message.cards:
             panel.show_results(message.cards)
         else:
             panel.show_error("No cards found.")
