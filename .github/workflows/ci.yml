@@ -21,14 +21,8 @@ jobs:
       - name: Install CI dependencies
         run: pip install -r requirements-ci.txt
 
-      - name: Format check (black)
-        run: black --check .
-
-      - name: Import order check (isort)
-        run: isort --check .
-
-      - name: Lint (flake8)
-        run: flake8 .
+      - name: Check & lint
+        run: make check
 
       - name: Tests
-        run: pytest
+        run: make test
