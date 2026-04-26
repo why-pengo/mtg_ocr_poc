@@ -151,9 +151,7 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
 
     _rate_limit()
     try:
-        search_resp = requests.get(
-            _SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10
-        )
+        search_resp = requests.get(_SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10)
     except requests.exceptions.RequestException as exc:
         print(f"  ✗  Network error contacting Scryfall: {exc}")
         return None
