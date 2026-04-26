@@ -13,7 +13,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import numpy as np
 
@@ -37,7 +37,7 @@ def _process_photo(
     filename: str,
     image: np.ndarray,
     engine: EasyOCREngine,
-) -> Optional[dict]:
+) -> dict[str, Any] | None:
     """Run OCR + Scryfall lookup for one photo with interactive review.
 
     Returns a Scryfall card dict on confirmation, or None if the user skips.
@@ -54,7 +54,7 @@ def _process_photo(
     detected = result.card_name or ""
 
     if detected:
-        conf_str = f"  (confidence: {result.confidence:.0%})" if result.confidence else ""
+        conf_str = f"  (confidence: {result.confidence:.0%})" if result.confidence is not None else ""
         print(f"🔍  Detected: \033[1m{detected}\033[0m{conf_str}")
     else:
         print(f"❌  OCR failed: {result.error or 'no text detected'}")
@@ -112,7 +112,7 @@ def main() -> None:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    confirmed: list[dict] = []
+    confirmed: list[dict[str, Any]] = []
     total = 0
 
     for filename, image in photo_source:

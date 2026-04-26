@@ -95,9 +95,18 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
     print(f'  🔎  Searching Scryfall for "{name}"…')
     _rate_limit()
 
-    resp = requests.get(_SCRYFALL_NAMED_URL, params={"fuzzy": name}, timeout=10)
+    try:
+        resp = requests.get(_SCRYFALL_NAMED_URL, params={"fuzzy": name}, timeout=10)
+    except requests.exceptions.RequestException as exc:
+        print(f"  ✗  Network error contacting Scryfall: {exc}")
+        return None
+
     if resp.status_code == 200:
-        card = resp.json()
+        try:
+            card = resp.json()
+        except ValueError:
+            print("  ✗  Invalid response from Scryfall.")
+            return None
         url = card.get("scryfall_uri", "")
         link = _hyperlink(url, card["name"]) if url else card["name"]
         print(f"  ✓  {link}  —  {card.get('set_name', '')} ({card.get('set', '').upper()})")
@@ -105,14 +114,29 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
 
     # Named lookup failed — try a broader search
     _rate_limit()
-    search_resp = requests.get(
-        _SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10
-    )
+    try:
+        search_resp = requests.get(
+            _SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10
+        )
+    except requests.exceptions.RequestException as exc:
+        print(f"  ✗  Network error contacting Scryfall: {exc}")
+        return None
+
+    if search_resp.status_code == 429:
+        print("  ✗  Scryfall rate limit hit — please wait and retry.")
+        return None
+    if search_resp.status_code >= 500:
+        print(f"  ✗  Scryfall server error ({search_resp.status_code}) — please retry later.")
+        return None
     if search_resp.status_code != 200:
         print(f'  ✗  No cards found matching "{name}".')
         return None
 
-    cards: list[dict[str, Any]] = search_resp.json().get("data", [])
+    try:
+        cards: list[dict[str, Any]] = search_resp.json().get("data", [])
+    except ValueError:
+        print("  ✗  Invalid response from Scryfall.")
+        return None
     if not cards:
         print(f'  ✗  No cards found matching "{name}".')
         return None

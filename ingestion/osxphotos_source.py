@@ -25,10 +25,10 @@ def iter_album_photos(album_name: str) -> Iterator[tuple[str, np.ndarray]]:
 
     try:
         import osxphotos
-    except ImportError:
+    except ImportError as exc:
         raise RuntimeError(
             "osxphotos is not installed. Run: pip install osxphotos"
-        )
+        ) from exc
 
     db = osxphotos.PhotosDB()
     album = next((a for a in db.album_info if a.title == album_name), None)

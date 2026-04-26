@@ -69,24 +69,22 @@ class TestIterAlbumPhotos:
             with pytest.raises(RuntimeError, match="macOS"):
                 list(iter_album_photos("MTG Cards to Scan"))
 
-    @pytest.mark.skipif(sys.platform != "darwin", reason="osxphotos is macOS-only")
     def test_raises_value_error_for_missing_album(self) -> None:
+        from ingestion.osxphotos_source import iter_album_photos
+
         mock_db = MagicMock()
         mock_db.album_info = []
+        mock_osxphotos = MagicMock()
+        mock_osxphotos.PhotosDB.return_value = mock_db
 
-        with patch("ingestion.osxphotos_source.sys") as mock_sys:
-            mock_sys.platform = "darwin"
-            with patch.dict("sys.modules", {"osxphotos": MagicMock(PhotosDB=lambda: mock_db)}):
-                from importlib import reload
-
-                import ingestion.osxphotos_source as src
-
-                reload(src)
+        with patch.object(sys, "platform", "darwin"):
+            with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
                 with pytest.raises(ValueError, match="not found"):
-                    list(src.iter_album_photos("Nonexistent Album"))
+                    list(iter_album_photos("Nonexistent Album"))
 
-    @pytest.mark.skipif(sys.platform != "darwin", reason="osxphotos is macOS-only")
     def test_skips_photos_not_on_disk(self, tmp_path: Path, capsys) -> None:
+        from ingestion.osxphotos_source import iter_album_photos
+
         mock_photo = MagicMock()
         mock_photo.filename = "card.jpg"
         mock_photo.path = None  # not on disk
@@ -101,22 +99,18 @@ class TestIterAlbumPhotos:
         mock_osxphotos = MagicMock()
         mock_osxphotos.PhotosDB.return_value = mock_db
 
-        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
-            from importlib import reload
-
-            import ingestion.osxphotos_source as src
-
-            reload(src)
-            results = list(src.iter_album_photos("MTG Cards to Scan"))
+        with patch.object(sys, "platform", "darwin"):
+            with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
+                results = list(iter_album_photos("MTG Cards to Scan"))
 
         assert results == []
         captured = capsys.readouterr()
         assert "Skipping" in captured.out
 
-    @pytest.mark.skipif(sys.platform != "darwin", reason="osxphotos is macOS-only")
     def test_yields_filename_and_ndarray(self, tmp_path: Path) -> None:
-        # Write a tiny real image so cv2.imread can read it
         import cv2
+
+        from ingestion.osxphotos_source import iter_album_photos
 
         img_path = tmp_path / "card.jpg"
         img = np.zeros((100, 70, 3), dtype=np.uint8)
@@ -136,13 +130,9 @@ class TestIterAlbumPhotos:
         mock_osxphotos = MagicMock()
         mock_osxphotos.PhotosDB.return_value = mock_db
 
-        with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
-            from importlib import reload
-
-            import ingestion.osxphotos_source as src
-
-            reload(src)
-            results = list(src.iter_album_photos("MTG Cards to Scan"))
+        with patch.object(sys, "platform", "darwin"):
+            with patch.dict("sys.modules", {"osxphotos": mock_osxphotos}):
+                results = list(iter_album_photos("MTG Cards to Scan"))
 
         assert len(results) == 1
         filename, image = results[0]
@@ -206,6 +196,14 @@ class TestLookupForIngestion:
             result = lookup_for_ingestion("Bolt")
 
         assert result == card_data
+
+    def test_returns_none_on_network_error(self) -> None:
+        import requests as req
+
+        with patch("scryfall.lookup.requests.get", side_effect=req.exceptions.RequestException("timeout")):
+            result = lookup_for_ingestion("Lightning Bolt")
+
+        assert result is None
 
     def test_user_can_skip_disambiguation(self, monkeypatch) -> None:
         named_resp = MagicMock()
