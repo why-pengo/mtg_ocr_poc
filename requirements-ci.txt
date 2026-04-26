@@ -1,6 +1,7 @@
 # CI-only lightweight dependencies (no heavy OCR engines)
 opencv-python-headless
 Pillow
+requests
 scrython
 rapidfuzz
 tabulate
