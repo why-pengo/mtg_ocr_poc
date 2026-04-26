@@ -1,0 +1,14 @@
+# CI-only lightweight dependencies (no heavy OCR engines)
+opencv-python-headless
+Pillow
+scrython
+rapidfuzz
+tabulate
+numpy
+
+# Dev/test
+pytest
+pytest-cov
+black
+isort
+flake8
