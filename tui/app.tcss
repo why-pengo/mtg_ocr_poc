@@ -1,0 +1,47 @@
+/* MTG OCR TUI — dark theme stylesheet */
+
+Screen {
+    background: $surface;
+}
+
+#engine-table {
+    height: 1fr;
+    border: solid $primary;
+    margin: 1;
+}
+
+#engine-table-label {
+    text-style: bold;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+#scryfall-section {
+    height: 1fr;
+    border: solid $accent;
+    margin: 1;
+    padding: 1;
+}
+
+#scryfall-label {
+    text-style: bold;
+    color: $text-muted;
+}
+
+#lookup-row {
+    height: 3;
+    padding: 0 1;
+}
+
+#name-input {
+    width: 1fr;
+}
+
+#results-log {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+Footer {
+    color: $text-muted;
+}

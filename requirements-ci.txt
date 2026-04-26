@@ -6,10 +6,12 @@ scrython
 rapidfuzz
 tabulate
 numpy
+textual
 
 # Dev/test
 pytest
 pytest-cov
+pytest-asyncio
 black
 isort
 flake8

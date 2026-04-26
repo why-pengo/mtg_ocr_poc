@@ -6,6 +6,7 @@ Pillow
 scrython
 rapidfuzz
 tabulate
+textual
 
 # Dev
 pytest
