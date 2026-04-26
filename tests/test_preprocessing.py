@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import cv2
 import numpy as np
-import pytest
 
 from preprocessing.card_detect import (
     _plausible_card_quad,
