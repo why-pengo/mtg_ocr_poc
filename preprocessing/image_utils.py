@@ -1,4 +1,5 @@
 """Name-region cropping, image enhancement, and OCR text normalisation helpers."""
+
 from __future__ import annotations
 
 import re
@@ -56,4 +57,3 @@ def normalize_ocr_text(text: str) -> str:
     for pattern, replacement in _OCR_SUBSTITUTIONS:
         text = re.sub(pattern, replacement, text)
     return text.strip()
-

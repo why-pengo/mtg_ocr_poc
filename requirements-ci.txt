@@ -5,6 +5,7 @@ scrython
 rapidfuzz
 tabulate
 numpy
+textual
 
 # Dev/test
 pytest

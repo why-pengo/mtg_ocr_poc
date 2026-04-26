@@ -1,4 +1,5 @@
 """Tests for Scryfall lookup and OSC 8 hyperlink helpers."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch

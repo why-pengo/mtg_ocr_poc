@@ -1,9 +1,15 @@
 """Scryfall card lookup via scrython with OSC 8 terminal hyperlinks."""
+
 from __future__ import annotations
 
 import time
+from typing import Any
 
+import requests
 import scrython
+
+_SCRYFALL_NAMED_URL = "https://api.scryfall.com/cards/named"
+_SCRYFALL_SEARCH_URL = "https://api.scryfall.com/cards/search"
 
 _RATE_LIMIT_S = 0.1  # 100 ms between calls per Scryfall policy
 
@@ -73,3 +79,42 @@ def _print_single_card(card: object) -> None:
     print(f"\n  {link}")
     print(f"  {card.type_line()}")  # type: ignore[attr-defined]
     print(f"  {card.set_name()} ({card.set().upper()})")  # type: ignore[attr-defined]
+
+
+def scryfall_search(name: str) -> list[dict[str, Any]]:
+    """Search Scryfall for *name*; return a list of card dicts (empty on failure).
+
+    Tries fuzzy named lookup first; falls back to broader search.
+    Never raises — returns [] on any error.
+    """
+    _rate_limit()
+
+    # Fuzzy named lookup — returns the single best match as a card object
+    try:
+        resp = requests.get(
+            _SCRYFALL_NAMED_URL,
+            params={"fuzzy": name},
+            timeout=10,
+        )
+        if resp.ok:
+            card = resp.json()
+            return [card]
+    except Exception:
+        pass
+
+    _rate_limit()
+
+    # Broader search fallback
+    try:
+        resp = requests.get(
+            _SCRYFALL_SEARCH_URL,
+            params={"q": f'name:"{name}"'},
+            timeout=10,
+        )
+        if resp.ok:
+            data = resp.json()
+            return data.get("data", [])
+    except Exception:
+        pass
+
+    return []

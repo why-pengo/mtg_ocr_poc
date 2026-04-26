@@ -1,4 +1,5 @@
 """TrOCR engine (HuggingFace transformer-based) — not yet implemented."""
+
 from __future__ import annotations
 
 import logging

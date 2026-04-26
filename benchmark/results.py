@@ -1,4 +1,5 @@
 """Accuracy tracking and ranked results summary table."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -47,9 +48,7 @@ def print_results_table(rows: list[BenchmarkRow]) -> None:
 
     header = (
         f"  {'Engine':<{col_engine}}  {'Detected Name':<{col_name}}"
-        f"  {'Conf':>6}  {'ms':>7}"
-        + (f"  {'Score':>6}" if has_scores else "")
-        + "  Notes"
+        f"  {'Conf':>6}  {'ms':>7}" + (f"  {'Score':>6}" if has_scores else "") + "  Notes"
     )
     sep = "─" * len(header)
 
@@ -62,7 +61,11 @@ def print_results_table(rows: list[BenchmarkRow]) -> None:
         name = r.card_name or "—"
         conf = f"{r.confidence:.2f}" if r.confidence is not None else "   n/a"
         ms = f"{r.elapsed_ms:.0f}"
-        score_col = (f"  {row.similarity:.3f}" if row.similarity is not None else "     —") if has_scores else ""
+        score_col = (
+            (f"  {row.similarity:.3f}" if row.similarity is not None else "     —")
+            if has_scores
+            else ""
+        )
         notes = r.error or ""
         print(
             f"  {r.engine_name:<{col_engine}}  {name:<{col_name}}"

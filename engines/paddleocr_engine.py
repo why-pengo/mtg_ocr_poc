@@ -1,8 +1,9 @@
 """PaddleOCR engine — not yet implemented."""
+
 from __future__ import annotations
 
 import logging
-import time
+import time  # noqa: F401  — reserved for future timing logic
 
 import numpy as np
 
