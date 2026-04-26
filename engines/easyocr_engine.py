@@ -1,4 +1,5 @@
 """EasyOCR engine — no system packages required."""
+
 from __future__ import annotations
 
 import logging

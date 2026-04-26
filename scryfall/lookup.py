@@ -1,8 +1,11 @@
 """Scryfall card lookup via scrython with OSC 8 terminal hyperlinks."""
+
 from __future__ import annotations
 
 import time
+from typing import Any, Optional
 
+import requests
 import scrython
 
 _RATE_LIMIT_S = 0.1  # 100 ms between calls per Scryfall policy
@@ -73,3 +76,85 @@ def _print_single_card(card: object) -> None:
     print(f"\n  {link}")
     print(f"  {card.type_line()}")  # type: ignore[attr-defined]
     print(f"  {card.set_name()} ({card.set().upper()})")  # type: ignore[attr-defined]
+
+
+_SCRYFALL_NAMED_URL = "https://api.scryfall.com/cards/named"
+_SCRYFALL_SEARCH_URL = "https://api.scryfall.com/cards/search"
+
+
+def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
+    """Fuzzy-search Scryfall and return a raw card dict for batch ingestion.
+
+    Performs a fuzzy named lookup first; falls back to a broader search if that fails.
+    When multiple results are returned, prompts the user to pick one interactively.
+
+    The returned dict is a Scryfall API card object — compatible with
+    ``PaperCard.upsert_from_scryfall()`` in the mtgas app.
+
+    Returns None if no card is found or the user skips disambiguation.
+    """
+    print(f'  🔎  Searching Scryfall for "{name}"…')
+    _rate_limit()
+
+    try:
+        resp = requests.get(_SCRYFALL_NAMED_URL, params={"fuzzy": name}, timeout=10)
+    except requests.exceptions.RequestException as exc:
+        print(f"  ✗  Network error contacting Scryfall: {exc}")
+        return None
+
+    if resp.status_code == 200:
+        try:
+            card = resp.json()
+        except ValueError:
+            print("  ✗  Invalid response from Scryfall.")
+            return None
+        url = card.get("scryfall_uri", "")
+        link = _hyperlink(url, card["name"]) if url else card["name"]
+        print(f"  ✓  {link}  —  {card.get('set_name', '')} ({card.get('set', '').upper()})")
+        return card
+
+    # Named lookup failed — try a broader search
+    _rate_limit()
+    try:
+        search_resp = requests.get(_SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10)
+    except requests.exceptions.RequestException as exc:
+        print(f"  ✗  Network error contacting Scryfall: {exc}")
+        return None
+
+    if search_resp.status_code == 429:
+        print("  ✗  Scryfall rate limit hit — please wait and retry.")
+        return None
+    if search_resp.status_code >= 500:
+        print(f"  ✗  Scryfall server error ({search_resp.status_code}) — please retry later.")
+        return None
+    if search_resp.status_code != 200:
+        print(f'  ✗  No cards found matching "{name}".')
+        return None
+
+    try:
+        cards: list[dict[str, Any]] = search_resp.json().get("data", [])
+    except ValueError:
+        print("  ✗  Invalid response from Scryfall.")
+        return None
+    if not cards:
+        print(f'  ✗  No cards found matching "{name}".')
+        return None
+
+    print(f"\n  Found {len(cards)} match(es):\n")
+    for i, card in enumerate(cards, 1):
+        url = card.get("scryfall_uri", "")
+        set_text = f"{card.get('set_name', '')} ({card.get('set', '').upper()})"
+        link = _hyperlink(url, card["name"]) if url else card["name"]
+        print(f"    {i}. {link}  —  {set_text}")
+
+    while True:
+        choice = input(f"\n  Pick [1–{len(cards)}] or [s]kip: ").strip().lower()
+        if choice == "s":
+            return None
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(cards):
+                return cards[idx]
+        except ValueError:
+            pass
+        print(f"  Please enter a number between 1 and {len(cards)}.")

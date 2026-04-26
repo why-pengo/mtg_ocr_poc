@@ -1,4 +1,5 @@
 """Abstract base class and result dataclass for all OCR engine implementations."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
