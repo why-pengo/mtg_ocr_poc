@@ -1,4 +1,5 @@
 """Tests for the image preprocessing pipeline."""
+
 from __future__ import annotations
 
 import cv2
@@ -109,26 +110,32 @@ class TestEnhanceForOcr:
 class TestNormalizeOcrText:
     def test_semicolon_becomes_comma(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Auntie Ool; Cursewretch") == "Auntie Ool, Cursewretch"
 
     def test_pipe_becomes_capital_i(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("|ron Will") == "Iron Will"
 
     def test_backtick_becomes_apostrophe(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Glen Elendra`s Answer") == "Glen Elendra's Answer"
 
     def test_collapses_extra_spaces(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Lightning  Bolt") == "Lightning Bolt"
 
     def test_strips_whitespace(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("  Bolt  ") == "Bolt"
 
     def test_clean_input_unchanged(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Lightning Bolt") == "Lightning Bolt"
 
 

@@ -7,6 +7,7 @@ Photos are read from a named Apple Photos album, OCR'd with EasyOCR, confirmed
 interactively, looked up on Scryfall, and written to a JSON file compatible with
 PaperCard.upsert_from_scryfall() in the mtgas app.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,7 +55,9 @@ def _process_photo(
     detected = result.card_name or ""
 
     if detected:
-        conf_str = f"  (confidence: {result.confidence:.0%})" if result.confidence is not None else ""
+        conf_str = (
+            f"  (confidence: {result.confidence:.0%})" if result.confidence is not None else ""
+        )
         print(f"🔍  Detected: \033[1m{detected}\033[0m{conf_str}")
     else:
         print(f"❌  OCR failed: {result.error or 'no text detected'}")

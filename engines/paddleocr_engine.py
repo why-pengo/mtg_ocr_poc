@@ -1,4 +1,5 @@
 """PaddleOCR engine — not yet implemented."""
+
 from __future__ import annotations
 
 import logging

@@ -1,4 +1,5 @@
 """Tests for the batch ingestion pipeline: osxphotos source, export, and Scryfall lookup."""
+
 from __future__ import annotations
 
 import json
@@ -11,7 +12,6 @@ import pytest
 
 from ingestion.export import write_json
 from scryfall.lookup import lookup_for_ingestion
-
 
 # ---------------------------------------------------------------------------
 # export.write_json
@@ -200,7 +200,9 @@ class TestLookupForIngestion:
     def test_returns_none_on_network_error(self) -> None:
         import requests as req
 
-        with patch("scryfall.lookup.requests.get", side_effect=req.exceptions.RequestException("timeout")):
+        with patch(
+            "scryfall.lookup.requests.get", side_effect=req.exceptions.RequestException("timeout")
+        ):
             result = lookup_for_ingestion("Lightning Bolt")
 
         assert result is None
@@ -213,10 +215,20 @@ class TestLookupForIngestion:
         search_resp.status_code = 200
         search_resp.json.return_value = {
             "data": [
-                {"id": "1", "name": "Card A", "set": "a", "set_name": "Alpha",
-                 "scryfall_uri": "https://scryfall.com/1"},
-                {"id": "2", "name": "Card B", "set": "b", "set_name": "Beta",
-                 "scryfall_uri": "https://scryfall.com/2"},
+                {
+                    "id": "1",
+                    "name": "Card A",
+                    "set": "a",
+                    "set_name": "Alpha",
+                    "scryfall_uri": "https://scryfall.com/1",
+                },
+                {
+                    "id": "2",
+                    "name": "Card B",
+                    "set": "b",
+                    "set_name": "Beta",
+                    "scryfall_uri": "https://scryfall.com/2",
+                },
             ]
         }
 

@@ -1,4 +1,5 @@
 """Scryfall card lookup via scrython with OSC 8 terminal hyperlinks."""
+
 from __future__ import annotations
 
 import time
@@ -115,9 +116,7 @@ def lookup_for_ingestion(name: str) -> Optional[dict[str, Any]]:
     # Named lookup failed — try a broader search
     _rate_limit()
     try:
-        search_resp = requests.get(
-            _SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10
-        )
+        search_resp = requests.get(_SCRYFALL_SEARCH_URL, params={"q": f'name:"{name}"'}, timeout=10)
     except requests.exceptions.RequestException as exc:
         print(f"  ✗  Network error contacting Scryfall: {exc}")
         return None

@@ -10,6 +10,7 @@ Strategy B — Inner structure detection (borderless/extended-art cards):
     Find the type line (strong horizontal divider at ~58% card height) via Hough lines,
     then back-calculate the card boundaries from that anchor.
 """
+
 from __future__ import annotations
 
 import logging
@@ -154,7 +155,9 @@ def _try_inner_detection(image: np.ndarray) -> Optional[np.ndarray]:
     if not ys:
         return None
     type_line_y = int(np.median(ys))
-    logger.debug("Type line detected at y=%d (%.1f%% of height)", type_line_y, type_line_y / h * 100)
+    logger.debug(
+        "Type line detected at y=%d (%.1f%% of height)", type_line_y, type_line_y / h * 100
+    )
 
     return _crop_from_type_line(image, type_line_y)
 
@@ -183,9 +186,7 @@ def _crop_from_type_line(image: np.ndarray, type_line_y: int) -> Optional[np.nda
     if (x2 - x1) < 20 or (card_bot - card_top) < 20:
         return None
 
-    logger.debug(
-        "Inner detection crop: x=%d–%d, y=%d–%d", x1, x2, card_top, card_bot
-    )
+    logger.debug("Inner detection crop: x=%d–%d, y=%d–%d", x1, x2, card_top, card_bot)
     return image[card_top:card_bot, x1:x2]
 
 
@@ -218,4 +219,3 @@ def _four_point_transform(image: np.ndarray, pts: np.ndarray) -> np.ndarray:
     )
     M = cv2.getPerspectiveTransform(rect, dst)
     return cv2.warpPerspective(image, M, (width, height))
-

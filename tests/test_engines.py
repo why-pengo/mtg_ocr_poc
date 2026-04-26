@@ -1,4 +1,5 @@
 """Tests for OCR engine implementations."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -18,7 +19,9 @@ class TestOCRResult:
         assert r.error is None
 
     def test_failed_result(self) -> None:
-        r = OCRResult(engine_name="Test", card_name=None, confidence=None, elapsed_ms=5.0, error="boom")
+        r = OCRResult(
+            engine_name="Test", card_name=None, confidence=None, elapsed_ms=5.0, error="boom"
+        )
         assert r.card_name is None
         assert r.error == "boom"
 

@@ -1,4 +1,5 @@
 """MTG OCR POC — benchmark OCR engines and look up a card on Scryfall."""
+
 from __future__ import annotations
 
 import argparse

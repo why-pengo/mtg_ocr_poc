@@ -1,4 +1,5 @@
 """JSON export for batch-ingested card data."""
+
 from __future__ import annotations
 
 import json

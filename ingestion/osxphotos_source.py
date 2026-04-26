@@ -1,4 +1,5 @@
 """Apple Photos album reader via osxphotos (macOS only)."""
+
 from __future__ import annotations
 
 import sys
@@ -26,17 +27,14 @@ def iter_album_photos(album_name: str) -> Iterator[tuple[str, np.ndarray]]:
     try:
         import osxphotos
     except ImportError as exc:
-        raise RuntimeError(
-            "osxphotos is not installed. Run: pip install osxphotos"
-        ) from exc
+        raise RuntimeError("osxphotos is not installed. Run: pip install osxphotos") from exc
 
     db = osxphotos.PhotosDB()
     album = next((a for a in db.album_info if a.title == album_name), None)
     if album is None:
         available = [a.title for a in db.album_info]
         raise ValueError(
-            f"Apple Photos album '{album_name}' not found.\n"
-            f"Available albums: {available}"
+            f"Apple Photos album '{album_name}' not found.\n" f"Available albums: {available}"
         )
 
     photos = album.photos
