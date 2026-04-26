@@ -1,5 +1,6 @@
 # Core — native engines (no system packages required)
 easyocr
+osxphotos  # macOS only — batch photo ingestion from Apple Photos
 opencv-python
 Pillow
 scrython
