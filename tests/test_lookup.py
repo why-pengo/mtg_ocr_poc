@@ -1,19 +1,20 @@
 """Tests for Scryfall lookup and OSC 8 hyperlink helpers."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from scryfall.lookup import _hyperlink, _lookup_and_display
+from scryfall.lookup import _lookup_and_display, hyperlink
 
 
 class TestHyperlink:
     def test_contains_url_and_text(self) -> None:
-        result = _hyperlink("https://scryfall.com/card/abc", "Lightning Bolt")
+        result = hyperlink("https://scryfall.com/card/abc", "Lightning Bolt")
         assert "https://scryfall.com/card/abc" in result
         assert "Lightning Bolt" in result
 
     def test_uses_osc8_escape_sequences(self) -> None:
-        result = _hyperlink("https://example.com", "Test")
+        result = hyperlink("https://example.com", "Test")
         assert "\033]8;;" in result
         assert "\033\\" in result
 

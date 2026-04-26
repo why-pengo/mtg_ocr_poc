@@ -5,6 +5,7 @@ Reads a preprocessed image, runs pytesseract, and writes a JSON result to stdout
 Usage (called by TesseractEngine via docker run):
     python run.py /mnt/images/<image_file>
 """
+
 from __future__ import annotations
 
 import json
@@ -38,9 +39,7 @@ def main() -> None:
         config = "--psm 7 --oem 1"
         text = pytesseract.image_to_string(image, config=config).strip()
 
-        data = pytesseract.image_to_data(
-            image, config=config, output_type=pytesseract.Output.DICT
-        )
+        data = pytesseract.image_to_data(image, config=config, output_type=pytesseract.Output.DICT)
         confidences = [c for c in data["conf"] if isinstance(c, (int, float)) and c > 0]
         avg_conf = sum(confidences) / len(confidences) / 100.0 if confidences else None
 
@@ -70,7 +69,11 @@ def main() -> None:
 
 def _fail(message: str) -> None:
     elapsed_ms = 0.0
-    print(json.dumps({"card_name": None, "confidence": None, "elapsed_ms": elapsed_ms, "error": message}))
+    print(
+        json.dumps(
+            {"card_name": None, "confidence": None, "elapsed_ms": elapsed_ms, "error": message}
+        )
+    )
     sys.exit(1)
 
 

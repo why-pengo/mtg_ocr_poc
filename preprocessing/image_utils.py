@@ -1,4 +1,5 @@
 """Name-region cropping, image enhancement, and OCR text normalisation helpers."""
+
 from __future__ import annotations
 
 import re
@@ -47,6 +48,22 @@ def enhance_for_ocr(image: np.ndarray) -> np.ndarray:
     return cv2.fastNlMeansDenoising(enhanced, h=10)
 
 
+def resize_for_ingestion(image: np.ndarray, max_long_edge: int = 1500) -> np.ndarray:
+    """Downsample *image* so its longest edge is at most *max_long_edge* pixels.
+
+    Preserves aspect ratio using area interpolation (best for downscaling).
+    Returns the original array unchanged if it already fits within the limit.
+    """
+    h, w = image.shape[:2]
+    long_edge = max(h, w)
+    if long_edge <= max_long_edge:
+        return image
+    scale = max_long_edge / long_edge
+    new_w = max(1, int(w * scale))
+    new_h = max(1, int(h * scale))
+    return cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+
 def normalize_ocr_text(text: str) -> str:
     """Apply MTG-specific corrections to raw OCR output.
 
@@ -56,4 +73,3 @@ def normalize_ocr_text(text: str) -> str:
     for pattern, replacement in _OCR_SUBSTITUTIONS:
         text = re.sub(pattern, replacement, text)
     return text.strip()
-

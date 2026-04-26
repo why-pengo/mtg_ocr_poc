@@ -1,9 +1,9 @@
 """Tests for the image preprocessing pipeline."""
+
 from __future__ import annotations
 
 import cv2
 import numpy as np
-import pytest
 
 from preprocessing.card_detect import (
     _plausible_card_quad,
@@ -11,7 +11,7 @@ from preprocessing.card_detect import (
     _try_outer_detection,
     detect_and_rectify,
 )
-from preprocessing.image_utils import crop_name_region, enhance_for_ocr
+from preprocessing.image_utils import crop_name_region, enhance_for_ocr, resize_for_ingestion
 
 
 class TestDetectAndRectify:
@@ -109,24 +109,63 @@ class TestEnhanceForOcr:
 class TestNormalizeOcrText:
     def test_semicolon_becomes_comma(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Auntie Ool; Cursewretch") == "Auntie Ool, Cursewretch"
 
     def test_pipe_becomes_capital_i(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("|ron Will") == "Iron Will"
 
     def test_backtick_becomes_apostrophe(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Glen Elendra`s Answer") == "Glen Elendra's Answer"
 
     def test_collapses_extra_spaces(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Lightning  Bolt") == "Lightning Bolt"
 
     def test_strips_whitespace(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("  Bolt  ") == "Bolt"
 
     def test_clean_input_unchanged(self) -> None:
         from preprocessing.image_utils import normalize_ocr_text
+
         assert normalize_ocr_text("Lightning Bolt") == "Lightning Bolt"
+
+
+class TestResizeForIngestion:
+    def test_no_op_when_image_fits(self) -> None:
+        img = np.zeros((800, 600, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1500)
+        assert result.shape == img.shape
+
+    def test_downsamples_landscape_image(self) -> None:
+        img = np.zeros((1200, 3000, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1500)
+        assert max(result.shape[:2]) <= 1500
+
+    def test_downsamples_portrait_image(self) -> None:
+        img = np.zeros((3000, 1200, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1500)
+        assert max(result.shape[:2]) <= 1500
+
+    def test_preserves_aspect_ratio(self) -> None:
+        img = np.zeros((2000, 1000, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1000)
+        h, w = result.shape[:2]
+        assert abs(h / w - 2.0) < 0.05  # original was 2:1
+
+    def test_preserves_channel_count(self) -> None:
+        img = np.zeros((3000, 2000, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1500)
+        assert result.ndim == 3
+
+    def test_exactly_at_limit_unchanged(self) -> None:
+        img = np.zeros((1500, 1000, 3), dtype=np.uint8)
+        result = resize_for_ingestion(img, max_long_edge=1500)
+        assert result.shape == img.shape

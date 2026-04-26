@@ -1,4 +1,5 @@
 """Tesseract OCR engine — runs inside Docker to avoid system package installation."""
+
 from __future__ import annotations
 
 import json
