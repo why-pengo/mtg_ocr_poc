@@ -132,6 +132,14 @@ tests/
    - `test:` — test additions/changes
    - `docs:` — documentation updates
    - `bench:` — benchmark data or scoring changes
+6. **PR review comments**: After addressing all review comments on a PR, mark each resolved comment
+   as resolved in GitHub using the GraphQL `resolveReviewThread` mutation (via `gh api graphql`).
+   - `feat:` — new engine or feature
+   - `fix:` — bug fixes
+   - `refactor:` — code cleanup
+   - `test:` — test additions/changes
+   - `docs:` — documentation updates
+   - `bench:` — benchmark data or scoring changes
 
 ## Important Notes
 
